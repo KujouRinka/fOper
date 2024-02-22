@@ -1,0 +1,16 @@
+gen-file: ./data/test.bin
+external-file:
+  - ./data/file1
+  - ./data/file2
+create-method: default
+operation:
+  - action: write
+    verb: file
+    par1: ./data/file1
+    par2: 0
+    par3: 1024
+  - action: write
+    verb: random
+    par1: 1024
+  - action: delete
+    par1: 512
