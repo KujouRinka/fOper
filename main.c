@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "config_inner.h"
 #include "global.h"
 
 #include "std_file_wrapper.h"
@@ -17,81 +18,59 @@ void clean() {
 }
 
 int main() {
-  struct Config *config = parse_config("./config/config.yaml");
+  struct ConfigObj *config = parse_config_v2("./config/config.yaml");
+  MUST(config != NULL, "config file is null");
+  CONFIG_REQUIRE(config, CONFIG_TYPE_MAP);
 
-  printf("gen_filename: %s\n", config->gen_filename);
-  printf("extern_file_size: %d\n", config->extern_file_size);
-  for (int i = 0; i < config->extern_file_size; i++) {
-    printf("external_file[%d]: %s\n", i, config->extern_files[i]);
-  }
-  printf("create_method: %s\n", config->create_method);
-  printf("operation_count: %d\n", config->operation_count);
-  for (int i = 0; i < config->operation_count; i++) {
-    printf("operation[%d]:\n", i);
-    printf("  kv_cnt: %d\n", config->operations[i].kv_cnt);
-    for (int j = 0; j < config->operations[i].kv_cnt; j++) {
-      printf("  kvs[%d]: %s=%s\n", j, config->operations[i].kvs[j].key, config->operations[i].kvs[j].value);
-    }
-  }
+  struct ConfigObj *gen_filename_obj = CONFIG_TRAIT(config, get_map, "gen-file");
+  MUST(gen_filename_obj != NULL, "gen-file is null");
+  CONFIG_REQUIRE(gen_filename_obj, CONFIG_TYPE_STRING);
 
-  // open external files
-  external_files_count = config->extern_file_size;
-  external_files = malloc(sizeof(string2file) * config->extern_file_size);
-  for (int i = 0; i < config->extern_file_size; ++i) {
-    external_files[i].filename = config->extern_files[i];
-    external_files[i].file = fopen(config->extern_files[i], "r");
-    if (external_files[i].file == NULL) {
-      FATAL("Could not open file %s\n", config->extern_files[i]);
-    }
+  char *gen_filename = CONFIG_TRAIT(gen_filename_obj, get_string);
+  MUST(strcmp(gen_filename, "") != 0, "gen-file is empty");
+
+  printf("gen-file: %s\n", gen_filename);
+
+  struct ConfigObj *external_files_obj = CONFIG_TRAIT(config, get_map, "external-files");
+  CONFIG_REQUIRE(external_files_obj, CONFIG_TYPE_ARRAY);
+  printf("extern-files: \n");
+  int extern_files_count = CONFIG_TRAIT(external_files_obj, get_array_size);
+  for (int i = 0; i < extern_files_count; ++i) {
+    struct ConfigObj *external_file_obj = CONFIG_TRAIT(external_files_obj, get_array, i);
+    MUST(external_file_obj != NULL, "external file is null");
+    CONFIG_REQUIRE(external_file_obj, CONFIG_TYPE_STRING);
+    printf("  %s\n", CONFIG_TRAIT(external_file_obj, get_string));
   }
 
-  // TODO: create method
-  void *output = NULL;
-  if (strcmp(config->create_method, "default") == 0) {
-    output = std_file_init(config->gen_filename, "w+");
-    if (output == NULL) {
-      FATAL("Could not open file %s\n", config->gen_filename);
-    }
-  } else {
-    FATAL("Unknown create method: %s\n", config->create_method);
-  }
-
-  for (int i = 0; i < config->operation_count; ++i) {
-    char *action = OperationGet(&config->operations[i], "action");
-    if (strcmp(action, "syscall") == 0) {
-      printf("syscall %s\n", OperationGet(&config->operations[i], "call"));
-      process_syscall(output, &config->operations[i]);
-    } else if (strcmp(action, "write") == 0) {
-      char *verb = OperationGet(&config->operations[i], "verb");
-      if (strcmp(verb, "file") == 0) {
-        char *filename = OperationGet(&config->operations[i], "filename");
-        char *offset_str = OperationGet(&config->operations[i], "offset");
-        char *len_str = OperationGet(&config->operations[i], "len");
-        long offset, len;
-        MUST_STR2L(offset, offset_str);
-        MUST_STR2L(len, len_str);
-        int ret = write_file(output, filename, offset, len);
-        if (ret != 0) {
-          FATAL("dwrite_file failed\n");
-        }
-      } else if (strcmp(verb, "random") == 0) {
-        char *len_str = OperationGet(&config->operations[i], "len");
-        long len;
-        MUST_STR2L(len, len_str);
-        int ret = write_rand(output, len);
-        if (ret != 0) {
-          FATAL("write_rand failed\n");
-        }
+  struct ConfigObj *operations_obj = CONFIG_TRAIT(config, get_map, "operation");
+  MUST(operations_obj != NULL, "operation is null");
+  CONFIG_REQUIRE(operations_obj, CONFIG_TYPE_ARRAY);
+  printf("operation: \n");
+  int operations_count = CONFIG_TRAIT(operations_obj, get_array_size);
+  for (int i = 0; i < operations_count; ++i) {
+    struct ConfigObj *operation_obj = CONFIG_TRAIT(operations_obj, get_array, i);
+    MUST(operation_obj != NULL, "operation is null");
+    CONFIG_REQUIRE(operation_obj, CONFIG_TYPE_MAP);
+    printf("  operation [%d]: \n", i);
+    int kv_count = CONFIG_TRAIT(operation_obj, get_map_size);
+    for (int j = 0; j < kv_count; ++j) {
+      struct objKv *kv = CONFIG_TRAIT(operation_obj, get_map_by_index, j);
+      MUST(kv != NULL, "kv is null");
+      CONFIG_REQUIRE(kv->key, CONFIG_TYPE_STRING);
+      printf("    %s: ", kv->key);
+      if (CONFIG_TRAIT(kv->value, type) == CONFIG_TYPE_STRING) {
+        printf("%s\n", CONFIG_TRAIT(kv->value, get_string));
+      } else if (CONFIG_TRAIT(kv->value, type) == CONFIG_TYPE_INT) {
+        printf("%d\n", CONFIG_TRAIT(kv->value, get_int));
+      } else if (CONFIG_TRAIT(kv->value, type) == CONFIG_TYPE_FLOAT) {
+        printf("%f\n", CONFIG_TRAIT(kv->value, get_float));
+      } else if (CONFIG_TRAIT(kv->value, type) == CONFIG_TYPE_BOOL) {
+        printf("%d\n", CONFIG_TRAIT(kv->value, get_bool));
       } else {
-        FATAL("Unknown verb: %s\n", OperationGet(&config->operations[i], "verb"));
+        FATAL("Invalid type: %d", CONFIG_TRAIT(kv->value, type));
       }
-    } else if (strcmp(action, "delete") == 0) {
-      printf("seek %s\n", OperationGet(&config->operations[i], "verb"));
-    } else {
-      FATAL("Unknown action: %s\n", OperationGet(&config->operations[i], "action"));
     }
   }
-  clean();
-  free_config(config);
+
   return 0;
 }
