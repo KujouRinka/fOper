@@ -16,8 +16,11 @@ void clean() {
   free(external_files);
 }
 
-int main() {
-  struct Config *config = parse_config("./config/config.yaml");
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    FATAL("Usage: %s <config file>\n", argv[0]);
+  }
+  struct Config *config = parse_config(argv[1]);
 
   printf("gen_filename: %s\n", config->gen_filename);
   printf("extern_file_size: %d\n", config->extern_file_size);
