@@ -15,7 +15,7 @@ int std_close(void *self);
 extern struct FileTrait std_file_trait;
 
 struct StdFile {
-  struct FileTrait file_trait;
+  struct FileTrait *file_trait;
   FILE *file;
 };
 
