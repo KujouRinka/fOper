@@ -7,30 +7,45 @@ struct FileTrait std_file_trait = {
     .write = std_write,
     .seek = std_seek,
     .truncate = std_truncate,
+    .fd = std_fd,
     .close = std_close,
 };
 
 int std_read(void *self, void *buf, size_t len) {
   struct StdFile *f = (struct StdFile *) self;
-  fread(buf, 1, len, f->file);
+  size_t ret = fread(buf, 1, len, f->file);
+  if (ret < len) {
+    if (feof(f->file)) {
+      return 0;
+    }
+    return -1;
+  }
   return 0;
 }
 
 int std_write(void *self, const void *buf, size_t len) {
   struct StdFile *f = (struct StdFile *) self;
+  size_t ret = fwrite(buf, 1, len, f->file);
+  if (ret < len) {
+    return -1;
+  }
   return 0;
 }
 
 int std_seek(void *self, ssize_t offset, int whence) {
   struct StdFile *f = (struct StdFile *) self;
-  fseek(f->file, offset, whence);
-  return 0;
+  return fseek(f->file, offset, whence);
 }
 
 int std_truncate(void *self, size_t len) {
   struct StdFile *f = (struct StdFile *) self;
   UNIMPLEMENTED();
   return 0;
+}
+
+int std_fd(void *self) {
+  struct StdFile *f = (struct StdFile *) self;
+  return fileno(f->file);
 }
 
 int std_close(void *self) {
@@ -44,7 +59,7 @@ void *std_file_init(const char *filename, const char *mode) {
   if (file == NULL) {
     return NULL;
   }
-  file->read_write_seeker = std_file_trait;
+  file->file_trait = std_file_trait;
   file->file = fopen(filename, mode);
   if (file->file == NULL) {
     free(file);

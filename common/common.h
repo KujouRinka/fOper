@@ -17,4 +17,44 @@
   fprintf(stderr, fmt, ##__VA_ARGS__); \
 } while (0)
 
+#define MUST_STR2L(var, str) do { \
+  char *endptr; \
+  var = strtol(str, &endptr, 10); \
+  if (*endptr != '\0') { \
+    FATAL("Invalid number: %s", str); \
+  } \
+} while (0)
+
+#define MUST_STR2LL(var, str) do { \
+  char *endptr; \
+  var = strtoll(str, &endptr, 10); \
+  if (*endptr != '\0') { \
+    FATAL("Invalid number: %s", str); \
+  } \
+} while (0)
+
+#define MUST_STR2INT(var, str) do { \
+  char *endptr; \
+  var = strtol(str, &endptr, 10); \
+  if (*endptr != '\0') { \
+    FATAL("Invalid number: %s", str); \
+  } \
+} while (0)
+
+#define MUST_STR2UL(var, str) do { \
+  char *endptr; \
+  var = strtoul(str, &endptr, 10); \
+  if (*endptr != '\0') { \
+    FATAL("Invalid number: %s", str); \
+  } \
+} while (0)
+
+#define MUST_STR2ULL(var, str) do { \
+  char *endptr; \
+  var = strtoull(str, &endptr, 10); \
+  if (*endptr != '\0') { \
+    FATAL("Invalid number: %s", str); \
+  } \
+} while (0)
+
 #endif

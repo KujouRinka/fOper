@@ -3,18 +3,19 @@
 
 #include <stdio.h>
 
-#include "file_interface.h"
+#include "file_trait.h"
 
 int std_read(void *self, void *buf, size_t len);
 int std_write(void *self, const void *buf, size_t len);
 int std_seek(void *self, ssize_t offset, int whence);
 int std_truncate(void *self, size_t len);
+int std_fd(void *self);
 int std_close(void *self);
 
 extern struct FileTrait std_file_trait;
 
 struct StdFile {
-  struct FileTrait read_write_seeker;
+  struct FileTrait file_trait;
   FILE *file;
 };
 

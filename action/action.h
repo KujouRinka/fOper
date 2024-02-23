@@ -3,5 +3,6 @@
 
 #include "write.h"
 #include "delete.h"
+#include "syscall.h"
 
 #endif

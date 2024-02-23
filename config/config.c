@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include "yaml.h"
+#include "common.h"
 
 struct Config *parse_config(const char *filename) {
   FILE *file = fopen(filename, "r");
@@ -21,8 +22,6 @@ struct Config *parse_config(const char *filename) {
 
   yaml_parser_initialize(&parser);
   yaml_parser_set_input_file(&parser, file);
-
-  int operation_index = 0;
 
   while (1) {
     if (!yaml_parser_parse(&parser, &event)) {
@@ -74,62 +73,7 @@ struct Config *parse_config(const char *filename) {
         yaml_parser_parse(&parser, &event);
         config->create_method = strdup((char *) event.data.scalar.value);
       } else if (strcmp((char *) event.data.scalar.value, "operation") == 0) {
-        // TODO: mem leak here
-        yaml_event_t next_event;
-        yaml_parser_parse(&parser, &next_event);
-
-        if (next_event.type == YAML_SEQUENCE_START_EVENT) {
-          yaml_parser_parse(&parser, &next_event);
-
-          int cap = 10;
-          config->operations = malloc(sizeof(struct Operation) * cap);
-          memset(config->operations, 0, sizeof(struct Operation) * cap);
-          while (next_event.type != YAML_SEQUENCE_END_EVENT) {
-            if (next_event.type == YAML_MAPPING_START_EVENT) {
-              if (operation_index == cap) {
-                cap *= 2;
-                config->operations = realloc(config->operations, sizeof(struct Operation) * cap);
-                if (!config->operations) {
-                  fprintf(stderr, "Failed to allocate memory for operations.\n");
-                  free_config(config);
-                  return NULL;
-                }
-              }
-              memset(
-                  &config->operations[operation_index],
-                  0,
-                  sizeof(struct Operation) * (cap - operation_index)
-              );
-              struct Operation *operation = &config->operations[operation_index++];
-              yaml_parser_parse(&parser, &next_event);
-              while (next_event.type != YAML_MAPPING_END_EVENT) {
-
-                if (strcmp((char *) next_event.data.scalar.value, "action") == 0) {
-                  yaml_parser_parse(&parser, &next_event);
-                  operation->action = strdup((char *) next_event.data.scalar.value);
-                } else if (strcmp((char *) next_event.data.scalar.value, "verb") == 0) {
-                  yaml_parser_parse(&parser, &next_event);
-                  operation->verb = strdup((char *) next_event.data.scalar.value);
-                } else if (strcmp((char *) next_event.data.scalar.value, "par1") == 0) {
-                  yaml_parser_parse(&parser, &next_event);
-                  operation->par1 = strdup((char *) next_event.data.scalar.value);
-                } else if (strcmp((char *) next_event.data.scalar.value, "par2") == 0) {
-                  yaml_parser_parse(&parser, &next_event);
-                  operation->par2 = strdup((char *) next_event.data.scalar.value);
-                } else if (strcmp((char *) next_event.data.scalar.value, "par3") == 0) {
-                  yaml_parser_parse(&parser, &next_event);
-                  operation->par3 = strdup((char *) next_event.data.scalar.value);
-                }
-
-                yaml_event_delete(&next_event);
-                yaml_parser_parse(&parser, &next_event);
-              }
-            }
-            yaml_event_delete(&next_event);
-            yaml_parser_parse(&parser, &next_event);
-          }
-          config->operation_count = operation_index;
-        }
+        config->operations = parse_operation(&parser, &config->operation_count);
       }
     }
 
@@ -145,6 +89,86 @@ struct Config *parse_config(const char *filename) {
   yaml_parser_delete(&parser);
 
   return config;
+}
+
+struct Operation *parse_operation(yaml_parser_t *parser, int *operation_count) {
+  struct Operation *operations = NULL;
+  yaml_event_t event;
+  yaml_parser_parse(parser, &event);
+
+  int operation_index = 0;
+
+  enum yaml_event_type_e type = event.type;
+  yaml_event_delete(&event);
+  if (type == YAML_SEQUENCE_START_EVENT) {
+    yaml_parser_parse(parser, &event);
+
+    int cap = 10;
+    operations = malloc(sizeof(struct Operation) * cap);
+    if (operations == NULL) {
+      EPRINTF("Failed to allocate memory for operations.");
+      return NULL;
+    }
+    memset(operations, 0, sizeof(struct Operation) * cap);
+    type = event.type;
+    yaml_event_delete(&event);
+    while (type != YAML_SEQUENCE_END_EVENT) {
+      if (type == YAML_MAPPING_START_EVENT) {
+        if (operation_index == cap) {
+          cap *= 2;
+          operations = realloc(operations, sizeof(struct Operation) * cap);
+          if (!operations) {
+            EPRINTF("Failed to allocate memory for operations.");
+            return NULL;
+          }
+        }
+        memset(
+            &operations[operation_index],
+            0,
+            sizeof(struct Operation) * (cap - operation_index)
+        );
+        struct Operation *operation = &operations[operation_index++];
+        yaml_parser_parse(parser, &event);
+
+        int kv_cap = 10;
+        operation->kvs = malloc(sizeof(struct Kv) * kv_cap);
+        memset(operation->kvs, 0, sizeof(struct Kv) * kv_cap);
+        operation->kv_cnt = 0;
+        while (event.type != YAML_MAPPING_END_EVENT) {
+          if (operation->kv_cnt == kv_cap) {
+            kv_cap *= 2;
+            operation->kvs = realloc(operation->kvs, sizeof(struct Kv) * kv_cap);
+            if (!operation->kvs) {
+              EPRINTF("Failed to allocate memory for kvs.");
+              return NULL;
+            }
+          }
+          memset(
+              &operation->kvs[operation->kv_cnt],
+              0,
+              sizeof(struct Kv) * (kv_cap - operation->kv_cnt)
+          );
+          struct Kv *kv = &operation->kvs[operation->kv_cnt++];
+          kv->key = strdup((char *) event.data.scalar.value);
+          yaml_event_delete(&event);
+          yaml_parser_parse(parser, &event);
+          kv->value = strdup((char *) event.data.scalar.value);
+          yaml_event_delete(&event);
+
+          yaml_parser_parse(parser, &event);
+        }
+      }
+      yaml_event_delete(&event);
+      yaml_parser_parse(parser, &event);
+      type = event.type;
+    }
+    *operation_count = operation_index;
+  } else {
+    EPRINTF("Invalid operation.\n");
+    return NULL;
+  }
+  yaml_event_delete(&event);
+  return operations;
 }
 
 void free_config(struct Config *config) {
@@ -165,14 +189,23 @@ void free_config(struct Config *config) {
 
   if (config->operations) {
     for (int i = 0; i < config->operation_count; i++) {
-      free(config->operations[i].action);
-      free(config->operations[i].verb);
-      free(config->operations[i].par1);
-      free(config->operations[i].par2);
-      free(config->operations[i].par3);
+      for (int j = 0; j < config->operations[i].kv_cnt; j++) {
+        free(config->operations[i].kvs[j].key);
+        free(config->operations[i].kvs[j].value);
+      }
+      free(config->operations[i].kvs);
     }
     free(config->operations);
   }
 
   free(config);
+}
+
+char *OperationGet(struct Operation *op, const char *key) {
+  for (int i = 0; i < op->kv_cnt; i++) {
+    if (strcmp(op->kvs[i].key, key) == 0) {
+      return op->kvs[i].value;
+    }
+  }
+  return "";
 }

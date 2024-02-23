@@ -2,9 +2,9 @@
 
 #include <stdio.h>
 
-#include "file_interface.h"
+#include "file_trait.h"
 
-int delete_offset(void *read_write_seeker, size_t offset) {
-  struct FileTrait *rw = (struct FileTrait *) read_write_seeker;
-  return rw->truncate(rw, offset);
+int delete_offset(void *file_trait, size_t offset) {
+  struct FileTrait *ft = (struct FileTrait *) file_trait;
+  return ft->truncate(ft, offset);
 }
