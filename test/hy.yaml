@@ -1,0 +1,16 @@
+server: 114.51.41.91
+# server: "172.105.219.226"
+auth: haaaa114514
+tls:
+  sni: 0x7fffffff.eu.org
+  insecure: false
+transport:
+  type: udp
+bandwidth:
+  up: 80 mbps
+  down: 170 mbps
+fastOpen: true
+socks5:
+  listen: 127.0.0.1:8888
+http:
+  listen: 127.0.0.1:8889

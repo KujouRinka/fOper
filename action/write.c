@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
 #include "file_trait.h"
 #include "global.h"
-#include "common.h"
 
 int write_file(void *file_trait, const char *filename, ssize_t offset, size_t len) {
   FILE *src = NULL;
