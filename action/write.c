@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common.h"
 #include "file_trait.h"
 #include "global.h"
-#include "common.h"
 
 int write_file(void *file_trait, const char *filename, ssize_t offset, size_t len) {
   FILE *src = NULL;
@@ -21,7 +21,7 @@ int write_file(void *file_trait, const char *filename, ssize_t offset, size_t le
     return -1;
   }
 
-  struct FileTrait *ft = (struct FileTrait *) file_trait;
+  struct FileTrait *ft = *(struct FileTrait **) file_trait;
   // copy len bytes from src to rw
   if (fseek(src, offset, SEEK_SET) != 0) {
     return -1;
@@ -34,7 +34,7 @@ int write_file(void *file_trait, const char *filename, ssize_t offset, size_t le
       return -1;
     }
     // write n bytes to rw
-    if (ft->write(ft, buf, read) != 0) {
+    if (ft->write(file_trait, buf, read) != 0) {
       return -1;
     }
     len -= read;
@@ -43,7 +43,7 @@ int write_file(void *file_trait, const char *filename, ssize_t offset, size_t le
 }
 
 int write_rand(void *file_trait, size_t len) {
-  struct FileTrait *ft = (struct FileTrait *) file_trait;
+  struct FileTrait *ft = *(struct FileTrait **) file_trait;
   // write len bytes to rw
   char buf[1024];
   while (len > 0) {
@@ -51,7 +51,7 @@ int write_rand(void *file_trait, size_t len) {
     for (size_t i = 0; i < to_write; i++) {
       buf[i] = rand() % 256;
     }
-    if (ft->write(ft, buf, to_write) != 0) {
+    if (ft->write(file_trait, buf, to_write) != 0) {
       return -1;
     }
     len -= to_write;

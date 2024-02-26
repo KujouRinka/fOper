@@ -59,7 +59,7 @@ void *std_file_init(const char *filename, const char *mode) {
   if (file == NULL) {
     return NULL;
   }
-  file->file_trait = std_file_trait;
+  file->file_trait = &std_file_trait;
   file->file = fopen(filename, mode);
   if (file->file == NULL) {
     free(file);

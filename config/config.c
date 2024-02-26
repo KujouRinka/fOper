@@ -1,211 +1,322 @@
 #include "config.h"
 
-#include "yaml.h"
-#include "common.h"
+#include <stdlib.h>
+#include <string.h>
 
-struct Config *parse_config(const char *filename) {
+#include <yaml.h>
+
+struct ConfigObj *parse_config_v2(const char *filename) {
   FILE *file = fopen(filename, "r");
-  if (!file) {
-    fprintf(stderr, "Failed to open file.\n");
+  if (file == NULL) {
     return NULL;
   }
 
   yaml_parser_t parser;
-  yaml_event_t event;
-
-  struct Config *config = malloc(sizeof(struct Config));
-  if (!config) {
-    fprintf(stderr, "Failed to allocate memory for config.\n");
+  if (!yaml_parser_initialize(&parser)) {
+    fclose(file);
     return NULL;
   }
-  memset(config, 0, sizeof(struct Config));
-
-  yaml_parser_initialize(&parser);
   yaml_parser_set_input_file(&parser, file);
 
-  while (1) {
-    if (!yaml_parser_parse(&parser, &event)) {
-      fprintf(stderr, "Failed to parse YAML.\n");
-      free_config(config);
-      return NULL;
-    }
-
-    if (event.type == YAML_SCALAR_EVENT) {
-      if (strcmp((char *) event.data.scalar.value, "gen-file") == 0) {
-        yaml_parser_parse(&parser, &event);
-        config->gen_filename = strdup((char *) event.data.scalar.value);
-      } else if (strcmp((char *) event.data.scalar.value, "external-file") == 0) {
-        yaml_event_t next_event;
-        yaml_parser_parse(&parser, &next_event);
-
-        if (next_event.type == YAML_SEQUENCE_START_EVENT) {
-          yaml_event_t e2;
-          yaml_parser_parse(&parser, &e2);
-
-          int cap = 10;
-          config->extern_files = malloc(sizeof(char *) * cap);
-          memset(config->extern_files, 0, sizeof(char *) * cap);
-          while (e2.type != YAML_SEQUENCE_END_EVENT) {
-            if (config->extern_file_size == cap) {
-              cap *= 2;
-              config->extern_files = realloc(config->extern_files, sizeof(char *) * cap);
-              if (!config->extern_files) {
-                fprintf(stderr, "Failed to allocate memory for extern_files.\n");
-                free_config(config);
-                return NULL;
-              }
-            }
-            memset(
-                &config->extern_files[config->extern_file_size],
-                0,
-                sizeof(char *) * (cap - config->extern_file_size)
-            );
-            if (e2.type == YAML_SCALAR_EVENT) {
-              config->extern_files[config->extern_file_size++] = strdup((char *) e2.data.scalar.value);
-            }
-            yaml_event_delete(&e2);
-            yaml_parser_parse(&parser, &e2);
-          }
-          yaml_event_delete(&e2);
-        }
-        yaml_event_delete(&next_event);
-      } else if (strcmp((char *) event.data.scalar.value, "create-method") == 0) {
-        yaml_parser_parse(&parser, &event);
-        config->create_method = strdup((char *) event.data.scalar.value);
-      } else if (strcmp((char *) event.data.scalar.value, "operation") == 0) {
-        config->operations = parse_operation(&parser, &config->operation_count);
-      }
-    }
-
-    enum yaml_event_type_e type = event.type;
-    yaml_event_delete(&event);
-
-    if (type == YAML_STREAM_END_EVENT) {
-      break;
-    }
-  }
-
-  fclose(file);
-  yaml_parser_delete(&parser);
-
-  return config;
+  return parsing_driver(&parser);
 }
 
-struct Operation *parse_operation(yaml_parser_t *parser, int *operation_count) {
-  struct Operation *operations = NULL;
-  yaml_event_t event;
-  yaml_parser_parse(parser, &event);
+struct ConfigObjTrait defaultConfigTrait = {
+    .type = config_obj_type_default,
+    .as_int = config_obj_as_int_default,
+    .as_float = config_obj_as_float_default,
+    .as_byte = config_obj_as_byte_default,
+    .as_string = config_obj_as_string_default,
+    .as_bool = config_obj_as_bool_default,
+    .as_map = config_obj_as_map_default,
+    .as_map_by_index = config_obj_as_map_by_index_default,
+    .as_map_size = config_obj_as_map_size_default,
+    .as_array = config_obj_as_array_default,
+    .as_array_size = config_obj_as_array_size_default,
 
-  int operation_index = 0;
+    .parse = NULL,
+    .free = config_obj_free_default,
+};
 
-  enum yaml_event_type_e type = event.type;
-  yaml_event_delete(&event);
-  if (type == YAML_SEQUENCE_START_EVENT) {
-    yaml_parser_parse(parser, &event);
+enum ConfigType config_obj_type_default(void *self) {
+  struct ConfigObj *obj = self;
+  return obj->type;
+}
 
-    int cap = 10;
-    operations = malloc(sizeof(struct Operation) * cap);
-    if (operations == NULL) {
-      EPRINTF("Failed to allocate memory for operations.");
-      return NULL;
+int config_obj_as_int_default(void *self) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_INT);
+  struct ConfigInt *obj = self;
+  return obj->value;
+}
+
+float config_obj_as_float_default(void *self) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_FLOAT);
+  struct ConfigFloat *obj = self;
+  return obj->value;
+}
+
+struct ConfigByte *config_obj_as_byte_default(void *self) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_BYTE);
+  struct ConfigByte *obj = self;
+  return obj;
+}
+
+static char *config_obj_as_string_default(void *self) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_BYTE);
+  struct ConfigByte *obj = self;
+  return (char *) obj->data;
+}
+
+int config_obj_as_bool_default(void *self) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_BOOL);
+  struct ConfigBool *obj = self;
+  return obj->value;
+}
+
+struct ConfigObj *config_obj_as_map_default(void *self, const char *key) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_MAP);
+  struct ConfigMap *obj = self;
+  for (int i = 0; i < obj->len; ++i) {
+    if (strcmp(obj->kvs[i].key, key) == 0) {
+      return obj->kvs[i].value;
     }
-    memset(operations, 0, sizeof(struct Operation) * cap);
-    type = event.type;
-    yaml_event_delete(&event);
-    while (type != YAML_SEQUENCE_END_EVENT) {
-      if (type == YAML_MAPPING_START_EVENT) {
-        if (operation_index == cap) {
-          cap *= 2;
-          operations = realloc(operations, sizeof(struct Operation) * cap);
-          if (!operations) {
-            EPRINTF("Failed to allocate memory for operations.");
-            return NULL;
-          }
-        }
-        memset(
-            &operations[operation_index],
-            0,
-            sizeof(struct Operation) * (cap - operation_index)
-        );
-        struct Operation *operation = &operations[operation_index++];
-        yaml_parser_parse(parser, &event);
+  }
+  return NULL;
+}
 
-        int kv_cap = 10;
-        operation->kvs = malloc(sizeof(struct Kv) * kv_cap);
-        memset(operation->kvs, 0, sizeof(struct Kv) * kv_cap);
-        operation->kv_cnt = 0;
-        while (event.type != YAML_MAPPING_END_EVENT) {
-          if (operation->kv_cnt == kv_cap) {
-            kv_cap *= 2;
-            operation->kvs = realloc(operation->kvs, sizeof(struct Kv) * kv_cap);
-            if (!operation->kvs) {
-              EPRINTF("Failed to allocate memory for kvs.");
-              return NULL;
-            }
-          }
-          memset(
-              &operation->kvs[operation->kv_cnt],
-              0,
-              sizeof(struct Kv) * (kv_cap - operation->kv_cnt)
-          );
-          struct Kv *kv = &operation->kvs[operation->kv_cnt++];
-          kv->key = strdup((char *) event.data.scalar.value);
-          yaml_event_delete(&event);
-          yaml_parser_parse(parser, &event);
-          kv->value = strdup((char *) event.data.scalar.value);
-          yaml_event_delete(&event);
+static struct objKv *config_obj_as_map_by_index_default(void *self, int index) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_MAP);
+  struct ConfigMap *obj = self;
+  return &obj->kvs[index];
+}
 
-          yaml_parser_parse(parser, &event);
-        }
+static size_t config_obj_as_map_size_default(void *self) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_MAP);
+  struct ConfigMap *obj = self;
+  return obj->len;
+}
+
+struct ConfigObj *config_obj_as_array_default(void *self, int index) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_ARRAY);
+  struct ConfigArray *obj = self;
+  return obj->data[index];
+}
+
+size_t config_obj_as_array_size_default(void *self) {
+  CONFIG_REQUIRE(self, CONFIG_TYPE_ARRAY);
+  struct ConfigArray *obj = self;
+  return obj->len;
+}
+
+int config_obj_free_default(void *self) {
+  return 0;
+}
+
+/*
+ * Init function for each type
+ */
+
+struct ConfigInt *config_int_init(struct ConfigInt *c) {
+  c->obj.trait = &defaultConfigTrait;
+  c->obj.type = CONFIG_TYPE_INT;
+  c->value = 0;
+  return c;
+}
+
+struct ConfigFloat *config_float_init(struct ConfigFloat *c) {
+  c->obj.trait = &defaultConfigTrait;
+  c->obj.type = CONFIG_TYPE_FLOAT;
+  c->value = 0;
+  return c;
+}
+
+struct ConfigByte *config_string_init(struct ConfigByte *c) {
+  c->obj.trait = &defaultConfigTrait;
+  c->obj.type = CONFIG_TYPE_BYTE;
+  c->data = NULL;
+  c->len = 0;
+  return c;
+}
+
+struct ConfigBool *config_bool_init(struct ConfigBool *c) {
+  c->obj.trait = &defaultConfigTrait;
+  c->obj.type = CONFIG_TYPE_BOOL;
+  c->value = 0;
+  return c;
+}
+
+struct objKv *config_kv_init(struct objKv *c) {
+  c->key = NULL;
+  c->value = NULL;
+  return c;
+}
+
+struct ConfigMap *config_map_init(struct ConfigMap *c) {
+  c->obj.trait = &defaultConfigTrait;
+  c->obj.type = CONFIG_TYPE_MAP;
+  c->kvs = NULL;
+  c->len = 0;
+  c->cap = 0;
+  return c;
+}
+
+struct ConfigArray *config_array_init(struct ConfigArray *c) {
+  c->obj.trait = &defaultConfigTrait;
+  c->obj.type = CONFIG_TYPE_ARRAY;
+  c->data = NULL;
+  c->len = 0;
+  c->cap = 0;
+  return c;
+}
+
+/*
+ * Parse function for each type
+ */
+
+static struct ConfigObj *parsing_driver(yaml_parser_t *parser) {
+  struct ConfigObj *obj = NULL;
+
+  yaml_token_t token;
+  yaml_parser_scan(parser, &token);
+  switch (token.type) {
+    /* Stream start/end */
+    case YAML_STREAM_START_TOKEN:
+      obj = parsing_driver(parser);
+      break;
+    case YAML_STREAM_END_TOKEN:
+      break;
+    /* Token types (read before actual token) */
+    case YAML_KEY_TOKEN:
+      break;
+    case YAML_VALUE_TOKEN:
+      break;
+    /* Block delimeters */
+    case YAML_BLOCK_SEQUENCE_START_TOKEN:
+      obj = config_obj_parse_array(parser);
+      break;
+    case YAML_BLOCK_ENTRY_TOKEN:
+      break;
+    case YAML_BLOCK_END_TOKEN:
+      break;
+    /* Data */
+    case YAML_BLOCK_MAPPING_START_TOKEN:
+      obj = config_obj_parse_map(parser);
+      break;
+    case YAML_SCALAR_TOKEN: {
+      struct ConfigByte *cs = malloc(sizeof(struct ConfigByte));
+      if (cs == NULL) {
+        EPRINTF("malloc failed.\n");
+        return NULL;
       }
-      yaml_event_delete(&event);
-      yaml_parser_parse(parser, &event);
-      type = event.type;
-    }
-    *operation_count = operation_index;
-  } else {
-    EPRINTF("Invalid operation.\n");
+      config_string_init(cs);
+      cs->len = strlen((char *) token.data.scalar.value);
+      cs->data = malloc(cs->len);
+      if (cs->data == NULL) {
+        EPRINTF("malloc failed.\n");
+        return NULL;
+      }
+      memcpy(cs->data, token.data.scalar.value, cs->len);
+      cs->data[cs->len] = '\0';
+      obj = (struct ConfigObj *) cs;
+    } break;
+    /* Others */
+    default:
+      EPRINTF("Unknown token type: %d\n", token.type);
+      break;
+  }
+  yaml_token_delete(&token);
+
+  return obj;
+}
+
+struct ConfigObj *config_obj_parse_int(yaml_parser_t *parser) {
+  UNIMPLEMENTED();
+}
+
+struct ConfigObj *config_obj_parse_float(yaml_parser_t *parser) {
+  UNIMPLEMENTED();
+}
+
+struct ConfigObj *config_obj_parse_byte(yaml_parser_t *parser) {
+  UNIMPLEMENTED();
+}
+
+struct ConfigObj *config_obj_parse_bool(yaml_parser_t *parser) {
+  UNIMPLEMENTED();
+}
+
+struct ConfigObj *config_obj_parse_map(yaml_parser_t *parser) {
+  yaml_token_t token;
+  struct ConfigMap *obj = malloc(sizeof(struct ConfigMap));
+  if (obj == NULL) {
+    EPRINTF("malloc failed.\n");
     return NULL;
   }
-  yaml_event_delete(&event);
-  return operations;
+  config_map_init(obj);
+
+  while (1) {
+    // alloc kv
+    struct objKv kv;
+    config_kv_init(&kv);
+
+    // read key
+    yaml_parser_scan(parser, &token);
+    if (token.type == YAML_BLOCK_END_TOKEN) {
+      yaml_token_delete(&token);
+      break;
+    } else if (token.type != YAML_KEY_TOKEN) {
+      EPRINTF("Invalid token type: %d\n", token.type);
+      return NULL;
+    }
+    yaml_token_delete(&token);
+    yaml_parser_scan(parser, &token);
+    if (token.type != YAML_SCALAR_TOKEN) {
+      EPRINTF("Invalid token type: %d\n", token.type);
+      return NULL;
+    }
+    kv.key = malloc(token.data.scalar.length + 1);
+    if (kv.key == NULL) {
+      EPRINTF("malloc failed.\n");
+      return NULL;
+    }
+    strcpy(kv.key, (char *) token.data.scalar.value);
+
+    // read value
+    yaml_parser_scan(parser, &token);
+    if (token.type != YAML_VALUE_TOKEN) {
+      EPRINTF("Invalid token type: %d\n", token.type);
+      return NULL;
+    }
+    yaml_token_delete(&token);
+    kv.value = parsing_driver(parser);
+    append_to_arr((void **) &obj->kvs, &obj->len, &obj->cap, &kv, sizeof(struct objKv));
+  }
+
+  return (struct ConfigObj *) obj;
 }
 
-void free_config(struct Config *config) {
-  if (config->gen_filename) {
-    free(config->gen_filename);
+struct ConfigObj *config_obj_parse_array(yaml_parser_t *parser) {
+  yaml_token_t token;
+  struct ConfigArray *obj = malloc(sizeof(struct ConfigArray));
+  if (obj == NULL) {
+    EPRINTF("malloc failed.\n");
+    return NULL;
   }
+  config_array_init(obj);
 
-  if (config->extern_files) {
-    for (int i = 0; i < config->extern_file_size; i++) {
-      free(config->extern_files[i]);
+  while (1) {
+    yaml_parser_scan(parser, &token);
+    if (token.type == YAML_BLOCK_END_TOKEN) {
+      yaml_token_delete(&token);
+      break;
+    } else if (token.type != YAML_BLOCK_ENTRY_TOKEN) {
+      EPRINTF("Invalid token type: %d\n", token.type);
+      return NULL;
     }
-    free(config->extern_files);
+    yaml_token_delete(&token);
+    struct ConfigObj *value = parsing_driver(parser);
+    append_to_arr((void **) &obj->data, &obj->len, &obj->cap, &value, sizeof(struct ConfigObj *));
   }
 
-  if (config->create_method) {
-    free(config->create_method);
-  }
-
-  if (config->operations) {
-    for (int i = 0; i < config->operation_count; i++) {
-      for (int j = 0; j < config->operations[i].kv_cnt; j++) {
-        free(config->operations[i].kvs[j].key);
-        free(config->operations[i].kvs[j].value);
-      }
-      free(config->operations[i].kvs);
-    }
-    free(config->operations);
-  }
-
-  free(config);
-}
-
-char *OperationGet(struct Operation *op, const char *key) {
-  for (int i = 0; i < op->kv_cnt; i++) {
-    if (strcmp(op->kvs[i].key, key) == 0) {
-      return op->kvs[i].value;
-    }
-  }
-  return "";
+  return (struct ConfigObj *) obj;
 }
