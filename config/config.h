@@ -42,7 +42,6 @@ struct ConfigObjTrait {
   struct ConfigObj *(*as_array)(void *self, int index);
   size_t (*as_array_size)(void *self);
 
-  struct ConfigObj (*parse)(void *self, yaml_parser_t *parser);
   int (*free)(void *self);
 };
 

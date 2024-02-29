@@ -9,6 +9,7 @@ int std_read(void *self, void *buf, size_t len);
 int std_write(void *self, const void *buf, size_t len);
 int std_seek(void *self, ssize_t offset, int whence);
 int std_truncate(void *self, size_t len);
+int std_flush(void *self);
 int std_fd(void *self);
 int std_close(void *self);
 

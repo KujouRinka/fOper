@@ -10,6 +10,7 @@ struct FileTrait {
   int (*write)(void *self, const void *buf, size_t len);
   int (*seek)(void *self, ssize_t offset, int whence);
   int (*truncate)(void *self, size_t len);
+  int (*flush)(void *self);
   int (*fd)(void *self);
   int (*close)(void *self);
   // TODO: more methods

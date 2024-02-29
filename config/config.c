@@ -5,6 +5,8 @@
 
 #include <yaml.h>
 
+#include "common.h"
+
 struct ConfigObj *parse_config_v2(const char *filename) {
   FILE *file = fopen(filename, "r");
   if (file == NULL) {
@@ -34,7 +36,6 @@ struct ConfigObjTrait defaultConfigTrait = {
     .as_array = config_obj_as_array_default,
     .as_array_size = config_obj_as_array_size_default,
 
-    .parse = NULL,
     .free = config_obj_free_default,
 };
 
@@ -44,15 +45,21 @@ enum ConfigType config_obj_type_default(void *self) {
 }
 
 int config_obj_as_int_default(void *self) {
-  CONFIG_REQUIRE(self, CONFIG_TYPE_INT);
-  struct ConfigInt *obj = self;
-  return obj->value;
+  CONFIG_REQUIRE(self, CONFIG_TYPE_BYTE);
+  struct ConfigByte *obj = self;
+  char *end;
+  int ret = strtol((char *) obj->data, &end, 10);
+  MUST(*end == '\0', "Invalid number: %s", (char *) obj->data);
+  return ret;
 }
 
 float config_obj_as_float_default(void *self) {
   CONFIG_REQUIRE(self, CONFIG_TYPE_FLOAT);
-  struct ConfigFloat *obj = self;
-  return obj->value;
+  struct ConfigByte *obj = self;
+  char *end;
+  float ret = strtof((char *) obj->data, &end);
+  MUST(*end == '\0', "Invalid number: %s", (char *) obj->data);
+  return ret;
 }
 
 struct ConfigByte *config_obj_as_byte_default(void *self) {
@@ -213,6 +220,7 @@ static struct ConfigObj *parsing_driver(yaml_parser_t *parser) {
       cs->data = malloc(cs->len);
       if (cs->data == NULL) {
         EPRINTF("malloc failed.\n");
+        free(cs);
         return NULL;
       }
       memcpy(cs->data, token.data.scalar.value, cs->len);
@@ -277,14 +285,17 @@ struct ConfigObj *config_obj_parse_map(yaml_parser_t *parser) {
     kv.key = malloc(token.data.scalar.length + 1);
     if (kv.key == NULL) {
       EPRINTF("malloc failed.\n");
+      yaml_token_delete(&token);
       return NULL;
     }
-    strcpy(kv.key, (char *) token.data.scalar.value);
+    memcpy(kv.key, token.data.scalar.value, token.data.scalar.length);
+    kv.key[token.data.scalar.length] = '\0';
 
     // read value
     yaml_parser_scan(parser, &token);
     if (token.type != YAML_VALUE_TOKEN) {
       EPRINTF("Invalid token type: %d\n", token.type);
+      free(kv.key);
       return NULL;
     }
     yaml_token_delete(&token);

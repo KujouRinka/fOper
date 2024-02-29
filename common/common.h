@@ -23,9 +23,9 @@
     exit(1);                                                                         \
   } while (0)
 
-#define EPRINTF(fmt, ...)                \
-  do {                                   \
-    fprintf(stderr, fmt, ##__VA_ARGS__); \
+#define EPRINTF(fmt, ...)                                                  \
+  do {                                                                     \
+    fprintf(stderr, fmt " at %s:%d\n", ##__VA_ARGS__, __FILE__, __LINE__); \
   } while (0)
 
 #define EXPECT_EQ(a, b, msg) \
@@ -42,11 +42,19 @@
     }                        \
   } while (0)
 
-#define MUST(expr, msg) \
-  do {                  \
-    if (!(expr)) {      \
-      FATAL(msg);       \
-    }                   \
+#define MUST(expr, fmt, args...) \
+  do {                           \
+    if (!(expr)) {               \
+      FATAL(fmt, ##args);        \
+    }                            \
+  } while (0)
+
+#define MUST_OR_RET(expr, ret, fmt, args...) \
+  do {                                       \
+    if (!(expr)) {                           \
+      EPRINTF(fmt, ##args);                  \
+      return (ret);                          \
+    }                                        \
   } while (0)
 
 #define MUST_STR2L(var, str)            \
@@ -102,6 +110,9 @@
       FATAL("Invalid number: %s", str); \
     }                                   \
   } while (0)
+
+#define TRAIT(obj, trait_type, method, args...) \
+  ((*(struct trait_type **) (obj))->method(obj, ##args))
 
 int append_to_arr(void **arr, size_t *len, size_t *cap, void *data, size_t data_size);
 

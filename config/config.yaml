@@ -1,4 +1,5 @@
-gen-file: ./data/test.bin
+task-type: gen-file
+target: ./data/test.bin
 external-file:
   - ./data/file1
   - ./data/file2
@@ -8,11 +9,29 @@ operation:
     call: sys_write
     data: "\x68\x65\x6c\x6c\x6f\x20\x77\x6f\x72\x6c\x64" # hello world
     len: 11
+  - action: syscall
+    call: sys_writev
+    iov-bufsize: 16
+    data:
+      - iov_base: "foobar"
+        iov_len: 6
+      - iov_base: "hello"
+        iov_len: 5
+      - iov_base: "world"
   - action: write
     verb: file
     filename: ./data/file1
     offset: 0
     len: 1024
   - action: write
+    verb: file
+    filename: ./data/file1
+    offset: 1024
+    len: 1024
+  - action: write
     verb: random
     len: 1024
+  - action: move
+    fill: 42
+    offset: 1024
+    len: 1536

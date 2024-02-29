@@ -16,10 +16,7 @@ int write_file(void *file_trait, const char *filename, ssize_t offset, size_t le
       break;
     }
   }
-  if (src == NULL) {
-    EPRINTF("Could not find file %s\n", filename);
-    return -1;
-  }
+  MUST_OR_RET(src != NULL, -1, "file not found");
 
   struct FileTrait *ft = *(struct FileTrait **) file_trait;
   // copy len bytes from src to rw
@@ -30,13 +27,11 @@ int write_file(void *file_trait, const char *filename, ssize_t offset, size_t le
   while (len > 0) {
     size_t to_read = len > sizeof(buf) ? sizeof(buf) : len;
     size_t read = fread(buf, 1, to_read, src);
-    if (read == 0) {
-      return -1;
-    }
+    MUST_OR_RET(read > 0, -1, "fread failed");
+
     // write n bytes to rw
-    if (ft->write(file_trait, buf, read) != 0) {
-      return -1;
-    }
+    MUST_OR_RET(ft->write(file_trait, buf, read) == 0, -1, "write failed");
+
     len -= read;
   }
   return 0;
@@ -51,9 +46,8 @@ int write_rand(void *file_trait, size_t len) {
     for (size_t i = 0; i < to_write; i++) {
       buf[i] = rand() % 256;
     }
-    if (ft->write(file_trait, buf, to_write) != 0) {
-      return -1;
-    }
+    MUST_OR_RET(ft->write(file_trait, buf, to_write) == 0, -1, "write failed");
+
     len -= to_write;
   }
   return 0;

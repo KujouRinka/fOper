@@ -7,6 +7,7 @@ struct FileTrait std_file_trait = {
     .write = std_write,
     .seek = std_seek,
     .truncate = std_truncate,
+    .flush = std_flush,
     .fd = std_fd,
     .close = std_close,
 };
@@ -26,9 +27,8 @@ int std_read(void *self, void *buf, size_t len) {
 int std_write(void *self, const void *buf, size_t len) {
   struct StdFile *f = (struct StdFile *) self;
   size_t ret = fwrite(buf, 1, len, f->file);
-  if (ret < len) {
-    return -1;
-  }
+  MUST_OR_RET(ret == len, -1, "fwrite failed");
+
   return 0;
 }
 
@@ -41,6 +41,11 @@ int std_truncate(void *self, size_t len) {
   struct StdFile *f = (struct StdFile *) self;
   UNIMPLEMENTED();
   return 0;
+}
+
+int std_flush(void *self) {
+  struct StdFile *f = (struct StdFile *) self;
+  return fflush(f->file);
 }
 
 int std_fd(void *self) {
