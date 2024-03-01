@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-#include "file_trait.h"
+#include "file/trait.h"
 
 int delete_offset(void *file_trait, size_t offset) {
   struct FileTrait *ft = *(struct FileTrait **) file_trait;

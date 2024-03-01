@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "common.h"
-#include "file_trait.h"
+#include "file/trait.h"
 #include "global.h"
 
 int write_file(void *file_trait, const char *filename, ssize_t offset, size_t len) {

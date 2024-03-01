@@ -1,8 +1,8 @@
 #include "syscall.h"
 
 #include "common.h"
-#include "config.h"
-#include "file_trait.h"
+#include "config/config.h"
+#include "file/trait.h"
 
 #include "sys/uio.h"
 #include "unistd.h"

@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 int main() {
-  printf("\033[1;32mTest Config Begin\033[0m\n");
+  LOG("\033[1;32mTest Config Begin\033[0m\n");
 
   struct ConfigObj *config = parse_config_v2("./test/hy.yaml");
   EXPECT_NE(config, NULL, "config file is null");
@@ -44,6 +44,6 @@ int main() {
   CONFIG_REQUIRE(listen, CONFIG_TYPE_BYTE);
   EXPECT_EQ(memcmp(listen->data, "127.0.0.1:8889", listen->len), 0, "listen is not equal");
 
-  printf("\033[1;32mTest Config Passed!\033[0m\n");
+  LOG("\033[1;32mTest Config Passed!\033[0m\n");
   return 0;
 }

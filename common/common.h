@@ -28,6 +28,11 @@
     fprintf(stderr, fmt " at %s:%d\n", ##__VA_ARGS__, __FILE__, __LINE__); \
   } while (0)
 
+#define LOG(fmt, ...)                                                  \
+  do {                                                                \
+    fprintf(stderr, fmt, ##__VA_ARGS__); \
+  } while (0)
+
 #define EXPECT_EQ(a, b, msg) \
   do {                       \
     if ((a) != (b)) {        \

@@ -5,8 +5,8 @@
 #include "common.h"
 #include "global.h"
 
-#include "cmd.h"
-#include "config.h"
+#include "cmd/cmd.h"
+#include "config/config.h"
 
 void clean() {
   for (int i = 0; i < external_files_count; i++) {

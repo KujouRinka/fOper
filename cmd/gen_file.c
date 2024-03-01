@@ -1,11 +1,11 @@
 #include "gen_file.h"
 
-#include "action.h"
+#include "action/action.h"
 #include "global.h"
 
 #include "common.h"
-#include "config.h"
-#include "std_file_wrapper.h"
+#include "config/config.h"
+#include "file/std_file_wrapper.h"
 
 int cmd_gen_file(struct ConfigObj *config) {
   char *gen_file = CONFIG_TRAIT(CONFIG_TRAIT(config, as_map, "target"), as_string);

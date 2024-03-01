@@ -3,16 +3,11 @@
 #if defined(__linux__)
 #include <fcntl.h>
 #include <unistd.h>
-
-#include <errno.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #endif
 
 #include "common.h"
-#include "config.h"
-#include "file_trait.h"
+#include "config/config.h"
+#include "file/trait.h"
 
 int action_move(void *file_trait, struct ConfigObj *config) {
   int fd = TRAIT(file_trait, FileTrait, fd);

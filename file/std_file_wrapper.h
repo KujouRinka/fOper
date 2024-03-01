@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#include "file_trait.h"
+#include "trait.h"
 
 int std_read(void *self, void *buf, size_t len);
 int std_write(void *self, const void *buf, size_t len);
