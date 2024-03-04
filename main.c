@@ -31,15 +31,15 @@ int main(int argc, char **argv) {
 
   int ret;
   if (strcmp(task_type, "gen-file") == 0) {
-    ret =  cmd_gen_file(config);
+    ret = cmd_gen_file(config);
   } else if (strcmp(task_type, "copy-file") == 0) {
-    ret = -1;
+    ret = cmd_copy_file(config);
   } else {
     ret = -1;
   }
 
   if (ret != 0) {
-    EPRINTF("Task failed\n");
+    EPRINTF("Task failed");
   }
 
   clean();

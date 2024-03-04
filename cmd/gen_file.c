@@ -1,6 +1,6 @@
 #include "gen_file.h"
 
-#include "action/action.h"
+#include "action/gen_file/action.h"
 #include "global.h"
 
 #include "common.h"

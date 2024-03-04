@@ -5,6 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(__linux__)
+#include "arch/linux/common.h"
+#else
+
+#endif
+
 #define UNIMPLEMENTED()                                            \
   do {                                                             \
     fprintf(stderr, "Unimplemented: %s:%d\n", __FILE__, __LINE__); \
@@ -28,9 +34,9 @@
     fprintf(stderr, fmt " at %s:%d\n", ##__VA_ARGS__, __FILE__, __LINE__); \
   } while (0)
 
-#define LOG(fmt, ...)                                                  \
-  do {                                                                \
-    fprintf(stderr, fmt, ##__VA_ARGS__); \
+#define LOG(fmt, ...)                         \
+  do {                                        \
+    fprintf(stderr, fmt "\n", ##__VA_ARGS__); \
   } while (0)
 
 #define EXPECT_EQ(a, b, msg) \
@@ -120,5 +126,9 @@
   ((*(struct trait_type **) (obj))->method(obj, ##args))
 
 int append_to_arr(void **arr, size_t *len, size_t *cap, void *data, size_t data_size);
+int high_water_alloc(void **buf, size_t *bufsize, size_t newsize);
+
+const char *filepath_base_begin(const char *filepath);
+const char *filepath_dir_end(const char *filepath);
 
 #endif
