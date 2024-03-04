@@ -56,10 +56,11 @@ int std_fd(void *self) {
 int std_close(void *self) {
   struct StdFile *f = (struct StdFile *) self;
   fclose(f->file);
+  free(f);
   return 0;
 }
 
-void *std_file_init(const char *filename, const char *mode) {
+struct FileTrait *std_file_init(const char *filename, const char *mode) {
   struct StdFile *file = malloc(sizeof(struct StdFile));
   if (file == NULL) {
     return NULL;

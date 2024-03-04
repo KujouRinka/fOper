@@ -3,6 +3,7 @@
 
 #if defined(__linux__)
 
+#include "acl.h"
 #include "attr.h"
 #include "xattr.h"
 

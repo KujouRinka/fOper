@@ -20,6 +20,6 @@ struct StdFile {
   FILE *file;
 };
 
-void *std_file_init(const char *filename, const char *mode);
+struct FileTrait *std_file_init(const char *filename, const char *mode);
 
 #endif
