@@ -1,5 +1,8 @@
-#include <config.h>
+#include "config/config.h"
+
 #include <stdio.h>
+
+#include "common.h"
 
 int main() {
   LOG("\033[1;32mTest Config Begin\033[0m\n");
