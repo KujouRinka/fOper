@@ -59,13 +59,16 @@ static int vdcb(struct dirent *entry, const char *ori_path, const char *step_pat
     if (access(dst_dirname, F_OK) != 0) {
       MUST_OR_RET(mkdir(dst_dirname, 0755) == 0, (free(dst_dirname), -1), "mkdir failed: %s", strerror(errno));
     }
-    free(dst_dirname);
 
     char *src_filename = malloc(strlen(ori_path) + strlen(step_path) + strlen(entry->d_name) + 3);
     MUST_OR_RET(src_filename != NULL, -1, "malloc failed");
     sprintf(src_filename, "%s/%s/%s", ori_path, step_path, entry->d_name);
 
     fnwrite_dir_property(dst_dirname, src_filename, config);
+
+    free(dst_dirname);
+    free(src_filename);
+
     return 0;
   }
   // skip if is not file
