@@ -130,6 +130,8 @@ struct ConfigArray {
 
 struct ConfigArray *config_array_init(struct ConfigArray *c);
 
+char *config_map_get_string(struct ConfigObj *c, const char *key);
+
 #define CONFIG_TRAIT(obj_ptr, oper, args...) \
   ((((struct ConfigObj *) (obj_ptr))->trait->oper)(obj_ptr, ##args))
 

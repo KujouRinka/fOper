@@ -1,0 +1,43 @@
+task-type: copy-file
+target: ./data/dir
+source: ./action
+exclude:
+  - ./data/src_dir/exclude1
+  - ./data/src_dir/exclude2
+permission:
+  # action: default
+
+  action: mod
+  owner: root
+  group: rinka
+  mode:  r--rw----
+
+  # action: copy
+attr:
+  # action: default
+
+  action: mod
+  operation: -ia+A
+  # operation: =iaAe
+
+  # action: copy
+xattr:
+  # action: default
+
+  # action: mod
+  # operation:
+  #   - verb: set
+  #     name: user.test1
+  #     value: "test1"
+  #   - verb: del
+  #     name: user.test2
+
+  action: copy
+acl:
+# action: default
+
+  # action: mod
+  # operation: "u::rwx,u:rinka:r--,g::---,o::---,m::rwx"
+
+  action: copy
+

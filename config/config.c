@@ -331,3 +331,13 @@ struct ConfigObj *config_obj_parse_array(yaml_parser_t *parser) {
 
   return (struct ConfigObj *) obj;
 }
+
+char *config_map_get_string(struct ConfigObj *c, const char *key) {
+  CONFIG_REQUIRE(c, CONFIG_TYPE_MAP);
+  c = CONFIG_TRAIT(c, as_map, key);
+  if (c == NULL) {
+    return NULL;
+  }
+  CONFIG_REQUIRE(c, CONFIG_TYPE_BYTE);
+  return CONFIG_TRAIT(c, as_string);
+}
