@@ -16,7 +16,7 @@
 #include "copy_file.h"
 #include "file/trait.h"
 
-int write_property(struct FileTrait *f_dst, struct FileTrait *f_src, struct ConfigObj *config) {
+int write_property(struct FileTrait **f_dst, struct FileTrait **f_src, struct ConfigObj *config) {
   int fd_dst = TRAIT(f_dst, FileTrait, fd);
   int fd_src = TRAIT(f_src, FileTrait, fd);
 

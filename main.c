@@ -15,10 +15,16 @@ void clean() {
   free(external_files);
 }
 
+void init() {
+  free_list_init();
+}
+
 int main(int argc, char **argv) {
   if (argc != 2) {
     FATAL("Usage: %s <config file>", argv[0]);
   }
+
+  init();
 
   struct ConfigObj *config = parse_config_v2(argv[1]);
   MUST(config != NULL, "config file is null");

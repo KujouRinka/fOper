@@ -60,3 +60,5 @@ const char *filepath_dir_end(const char *filepath) {
   }
   return end;
 }
+
+FN_VOID_TO_INT_ADAPTER_DEF(free_adapter, free, void *);

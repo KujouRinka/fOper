@@ -60,7 +60,7 @@ int std_close(void *self) {
   return 0;
 }
 
-struct FileTrait *std_file_init(const char *filename, const char *mode) {
+struct FileTrait **std_file_init(const char *filename, const char *mode) {
   struct StdFile *file = malloc(sizeof(struct StdFile));
   if (file == NULL) {
     return NULL;
@@ -71,5 +71,5 @@ struct FileTrait *std_file_init(const char *filename, const char *mode) {
     free(file);
     return NULL;
   }
-  return file;
+  return (struct FileTrait **) file;
 }

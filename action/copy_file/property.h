@@ -4,7 +4,7 @@
 struct FileTrait;
 struct ConfigObj;
 
-int write_property(struct FileTrait *f_dst, struct FileTrait *f_src, struct ConfigObj *config);
+int write_property(struct FileTrait **f_dst, struct FileTrait **f_src, struct ConfigObj *config);
 int fwrite_property(int fd_dst, int fd_src, struct ConfigObj *config);
 int fnwrite_property(const char *dst, const char *src, struct ConfigObj *config);
 

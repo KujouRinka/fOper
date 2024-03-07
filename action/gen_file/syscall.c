@@ -1,4 +1,5 @@
 #include "syscall.h"
+#include <errno.h>
 
 #include "common.h"
 #include "config/config.h"
@@ -42,6 +43,8 @@ int syscall_sys_write(void *file_trait, struct ConfigMap *op) {
 }
 
 static int syscall_sys_writev(void *file_trait, struct ConfigMap *op) {
+  FN_META();
+
   int iov_bufsize = 16;
   struct ConfigObj *iov_bufsize_obj = CONFIG_TRAIT(op, as_map, "iov-bufsize");
   if (iov_bufsize_obj != NULL) {
@@ -52,6 +55,7 @@ static int syscall_sys_writev(void *file_trait, struct ConfigMap *op) {
   }
 
   struct iovec *iov = malloc(sizeof(struct iovec) * iov_bufsize);
+  free_list_add(iov, free_adapter);
   size_t iov_cnt = 0;
   struct ConfigObj *data = CONFIG_TRAIT(op, as_map, "data");
   MUST(data != NULL, "data is null");
@@ -81,22 +85,17 @@ static int syscall_sys_writev(void *file_trait, struct ConfigMap *op) {
     if (iov_cnt % iov_bufsize == 0) {
       int fd = (*(struct FileTrait **) file_trait)->fd(file_trait);
       ssize_t ret = writev(fd, iov, iov_bufsize);
-      if (ret == -1 || ret != wish_to_write) {
-        EPRINTF("writev failed\n");
-        return -1;
-      }
+      MUST_OR_FREE_RET(!(ret == -1 || ret != wish_to_write), -1, "writev failed: %s", strerror(errno));
+
       wish_to_write = 0;
     }
   }
   if (iov_cnt % iov_bufsize != 0) {
     int fd = (*(struct FileTrait **) file_trait)->fd(file_trait);
     ssize_t ret = writev(fd, iov, iov_cnt % iov_bufsize);
-    if (ret == -1 || ret != wish_to_write) {
-      EPRINTF("writev failed\n");
-      return -1;
-    }
+    MUST_OR_FREE_RET(!(ret == -1 || ret != wish_to_write), -1, "writev failed: %s", strerror(errno));
   }
 
-  free(iov);
+  FN_CLEAN();
   return 0;
 }

@@ -17,18 +17,22 @@
 #endif
 
 int copy_file(const char *dst, const char *src, struct ConfigObj *config) {
+  FN_META();
 
   // copy file src to dst
   // TODO: How to open file?
-  struct FileTrait *src_file = std_file_init(src, "r");
-  MUST_OR_RET(src_file != NULL, -1, "open file failed: %s: %s", src, strerror(errno));
-  struct FileTrait *dst_file = std_file_init(dst, "w+");
-  MUST_OR_RET(dst_file != NULL, (TRAIT(src_file, FileTrait, close), -1), "open file failed: %s: %s", dst, strerror(errno));
+  struct FileTrait **src_file = std_file_init(src, "r");
+  MUST_OR_FREE_RET(src_file != NULL, -1, "open file failed: %s: %s", src, strerror(errno));
+  free_list_add(src_file, (*src_file)->close);
+  struct FileTrait **dst_file = std_file_init(dst, "w+");
+  MUST_OR_FREE_RET(dst_file != NULL, (TRAIT(src_file, FileTrait, close), -1), "open file failed: %s: %s", dst, strerror(errno));
+  free_list_add(dst_file, (*dst_file)->close);
 
-  MUST_OR_RET(copy(dst_file, src_file) == 0, -1, "copy file failed");
+  MUST_OR_FREE_RET(copy(dst_file, src_file) == 0, -1, "copy file failed");
 
-  MUST_OR_RET(write_property(dst_file, src_file, config) == 0, -1, "write property failed");
+  MUST_OR_FREE_RET(write_property(dst_file, src_file, config) == 0, -1, "write property failed");
 
+  FN_CLEAN();
   return 0;
 }
 
@@ -46,22 +50,24 @@ int copy_file_to_dir(const char *dst, const char *src, struct ConfigObj *config)
   return ret;
 }
 
-#if defined(__linux__)
 static int vdcb(struct dirent *entry, const char *ori_path, const char *step_path, void *arg) {
+  FN_META();
+
+#if defined(__linux__)
   const char *dst_dir = (const char *) ((uint64_t *) arg)[0];
   struct ConfigObj *config = (struct ConfigObj *) ((uint64_t *) arg)[1];
 
   // create dir if not exist
   if (entry->d_type == DT_DIR) {
     char *dst_dirname = malloc(strlen(dst_dir) + strlen(step_path) + strlen(entry->d_name) + 3);
-    MUST_OR_RET(dst_dirname != NULL, -1, "malloc failed");
+    MUST_OR_FREE_RET(dst_dirname != NULL, -1, "malloc failed");
     sprintf(dst_dirname, "%s/%s/%s", dst_dir, step_path, entry->d_name);
     if (access(dst_dirname, F_OK) != 0) {
-      MUST_OR_RET(mkdir(dst_dirname, 0755) == 0, (free(dst_dirname), -1), "mkdir failed: %s", strerror(errno));
+      MUST_OR_FREE_RET(mkdir(dst_dirname, 0755) == 0, (free(dst_dirname), -1), "mkdir failed: %s", strerror(errno));
     }
 
     char *src_filename = malloc(strlen(ori_path) + strlen(step_path) + strlen(entry->d_name) + 3);
-    MUST_OR_RET(src_filename != NULL, -1, "malloc failed");
+    MUST_OR_FREE_RET(src_filename != NULL, (free(dst_dirname), -1), "malloc failed");
     sprintf(src_filename, "%s/%s/%s", ori_path, step_path, entry->d_name);
 
     fnwrite_dir_property(dst_dirname, src_filename, config);
@@ -69,32 +75,37 @@ static int vdcb(struct dirent *entry, const char *ori_path, const char *step_pat
     free(dst_dirname);
     free(src_filename);
 
+    FN_CLEAN();
     return 0;
   }
   // skip if is not file
   if (entry->d_type != DT_REG) {
+    FN_CLEAN();
     return 0;
   }
 
   // make up src filename
   char *src_filename = malloc(strlen(ori_path) + strlen(step_path) + strlen(entry->d_name) + 3);
-  MUST_OR_RET(src_filename != NULL, -1, "malloc failed");
+  MUST_OR_FREE_RET(src_filename != NULL, -1, "malloc failed");
+  free_list_add(src_filename, free_adapter);
   sprintf(src_filename, "%s/%s/%s", ori_path, step_path, entry->d_name);
 
   // make up dst filename
   char *dst_filename = malloc(strlen(dst_dir) + strlen(step_path) + strlen(entry->d_name) + 3);
-  MUST_OR_RET(dst_filename != NULL, -1, "malloc failed");
+  MUST_OR_FREE_RET(dst_filename != NULL, -1, "malloc failed");
+  free_list_add(dst_filename, free_adapter);
   sprintf(dst_filename, "%s/%s/%s", dst_dir, step_path, entry->d_name);
 
   // copy file
   int ret = copy_file(dst_filename, src_filename, config);
-  MUST_OR_RET(ret == 0, (free(src_filename), free(dst_filename), -1), "copy_file failed");
-  free(src_filename);
-  free(dst_filename);
+  MUST_OR_FREE_RET(ret == 0, -1, "copy_file failed");
 
+  FN_CLEAN();
+#else
+  UNIMPLEMENTED();
+#endif
   return 0;
 }
-#endif
 
 int copy_dir(const char *dst, const char *src, struct ConfigObj *config) {
   struct {

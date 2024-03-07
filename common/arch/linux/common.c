@@ -31,7 +31,7 @@ int is_dir(const char *filename) {
   return S_ISDIR(path_stat.st_mode);
 }
 
-int copy(struct FileTrait *dst, struct FileTrait *src) {
+int copy(struct FileTrait **dst, struct FileTrait **src) {
   TRAIT(dst, FileTrait, flush);
   TRAIT(src, FileTrait, flush);
 

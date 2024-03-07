@@ -11,6 +11,23 @@
 
 #endif
 
+#include "global.h"
+
+#define FN_META() \
+  size_t __free_list_start_len_to_free_in_this_function__ = free_list.len
+
+#define FN_CLEAN() \
+  free_list_free(__free_list_start_len_to_free_in_this_function__)
+
+#define FN_VOID_TO_INT_ADAPTER_DEC(fn_name) \
+  int fn_name(void *arg);
+
+#define FN_VOID_TO_INT_ADAPTER_DEF(fn_name, fn, arg_type) \
+  int fn_name(void *arg) {                            \
+    fn((arg_type) arg);                               \
+    return 0;                                         \
+  }
+
 #define UNIMPLEMENTED()                                            \
   do {                                                             \
     fprintf(stderr, "Unimplemented: %s:%d\n", __FILE__, __LINE__); \
@@ -66,6 +83,15 @@
       EPRINTF(fmt, ##args);                  \
       return (ret);                          \
     }                                        \
+  } while (0)
+
+#define MUST_OR_FREE_RET(expr, ret, fmt, args...)                       \
+  do {                                                                  \
+    if (!(expr)) {                                                      \
+      EPRINTF(fmt, ##args);                                             \
+      free_list_free(__free_list_start_len_to_free_in_this_function__); \
+      return (ret);                                                     \
+    }                                                                   \
   } while (0)
 
 #define MUST_STR2L(var, str)            \
@@ -130,5 +156,7 @@ int high_water_alloc(void **buf, size_t *bufsize, size_t newsize);
 
 const char *filepath_base_begin(const char *filepath);
 const char *filepath_dir_end(const char *filepath);
+
+FN_VOID_TO_INT_ADAPTER_DEC(free_adapter);
 
 #endif

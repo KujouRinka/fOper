@@ -78,36 +78,48 @@ int file_acl_set_mode(int fd, const char *perm) {
 }
 
 char *file_acl_get_owner(int fd, const char *owner) {
+  UNIMPLEMENTED();
 }
 
 char *file_acl_get_group(int fd, const char *group) {
+  UNIMPLEMENTED();
 }
 
 int file_acl_set_acl(int fd, const char *acl_str) {
+  FN_META();
+
   acl_t acl = acl_from_text(acl_str);
   MUST_OR_RET(acl != NULL, -1, "acl_from_text failed: %s", strerror(errno));
-  MUST_OR_RET(acl_valid(acl) == 0, (acl_free(acl), -1), "acl_valid failed: %s", strerror(errno));
-  MUST_OR_RET(acl_set_fd(fd, acl) == 0, (acl_free(acl), -1), "acl_set_fd failed: %s", strerror(errno));
-  acl_free(acl);
+  free_list_add(acl, acl_free);
+
+  MUST_OR_FREE_RET(acl_valid(acl) == 0, -1, "acl_valid failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(acl_set_fd(fd, acl) == 0, -1, "acl_set_fd failed: %s", strerror(errno));
+
+  FN_CLEAN();
   return 0;
 }
 
 int file_acl_add_entry(int fd, const char *entry_str) {
+  FN_META();
+
   acl_t acl = acl_get_fd(fd);
+  MUST_OR_RET(acl != NULL, -1, "acl_get_fd failed: %s", strerror(errno));
+  free_list_add(acl, acl_free);
+
   acl_t new_acl = acl_from_text(entry_str);
-  MUST(acl != NULL, "acl_get_fd failed: %s", strerror(errno));
-  MUST(new_acl != NULL, "acl_from_text failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(new_acl != NULL, -1, "acl_from_text failed: %s", strerror(errno));
+  free_list_add(new_acl, acl_free);
+
   acl_entry_t entry;
   acl_entry_t new_entry;
-  MUST_OR_RET(acl_create_entry(&acl, &entry) == 0, -1, "acl_create_entry failed: %s", strerror(errno));
-  MUST_OR_RET(acl_get_entry(new_acl, 0, &new_entry) == 1, -1, "acl_copy_entry failed: %s", strerror(errno));
-  MUST_OR_RET(acl_copy_entry(entry, new_entry) == 0, -1, "acl_copy_entry failed: %s", strerror(errno));
-  MUST_OR_RET(acl_valid(acl) == 0, -1, "acl_valid failed: %s", strerror(errno));
-  MUST_OR_RET(acl_set_fd(fd, acl) == 0, (acl_free(acl), acl_free(new_acl), -1), "acl_set_fd failed: %s", strerror(errno));
-  MUST_OR_RET(acl_calc_mask(&acl) == 0, -1, "acl_calc_mask failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(acl_create_entry(&acl, &entry) == 0, -1, "acl_create_entry failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(acl_get_entry(new_acl, 0, &new_entry) == 1, -1, "acl_copy_entry failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(acl_copy_entry(entry, new_entry) == 0, -1, "acl_copy_entry failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(acl_valid(acl) == 0, -1, "acl_valid failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(acl_set_fd(fd, acl) == 0, -1, "acl_set_fd failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(acl_calc_mask(&acl) == 0, -1, "acl_calc_mask failed: %s", strerror(errno));
 
-  acl_free(new_acl);
-  acl_free(acl);
+  FN_CLEAN();
 
   return 0;
 }
@@ -118,12 +130,14 @@ int file_acl_remove_entry(int fd, const char *entry_str) {
 }
 
 int file_acl_copy(int dst, int src) {
+  FN_META();
+
   acl_t acl_src = acl_get_fd(src);
   MUST(acl_src != NULL, "acl_get_fd failed");
 
-  MUST_OR_RET(acl_set_fd(dst, acl_src) == 0, -1, "acl_set_fd failed: %s", strerror(errno));
+  MUST_OR_FREE_RET(acl_set_fd(dst, acl_src) == 0, -1, "acl_set_fd failed: %s", strerror(errno));
 
-  acl_free(acl_src);
+  FN_CLEAN();
   return 0;
 }
 
