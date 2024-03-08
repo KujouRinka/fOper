@@ -42,7 +42,7 @@ int file_set_xattr(int fd, const char *name, const char *value) {
 }
 
 int file_remove_xattr(int fd, const char *name) {
-  MUST_OR_RET(fremovexattr(fd, name) == 0, -1, "fremovexattr failed: %s", strerror(errno));
+  MUST_OR_RET(fremovexattr(fd, name) == 0 || errno == ENODATA, -1, "fremovexattr failed: %s", strerror(errno));
   return 0;
 }
 

@@ -34,10 +34,19 @@ xattr:
 
   action: copy
 acl:
-# action: default
+ # action: default
 
   # action: mod
   # operation: "u::rwx,u:rinka:r--,g::---,o::---,m::rwx"
 
   action: copy
+time:
+  # action: default
 
+  action: mod
+  fmt: "%Y-%m-%d %H:%M:%S"
+  # ctime: xxxxxxxx
+  mtime: 2000-01-01 00:00:00
+  atime: 2020-12-25 11:45:14
+
+  # action: copy

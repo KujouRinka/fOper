@@ -12,6 +12,7 @@ struct FileTrait {
   int (*truncate)(void *self, size_t len);
   int (*flush)(void *self);
   int (*fd)(void *self);
+  char *(*filename)(void *self);
   int (*close)(void *self);
   // TODO: more methods
 };

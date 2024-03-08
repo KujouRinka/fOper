@@ -24,7 +24,7 @@ int is_dir(const char *filename) {
   struct stat path_stat;
   if (stat(filename, &path_stat) != 0) {
     if (errno == ENOENT) {
-      return 0;
+      return 1;
     }
     MUST(0, "stat failed: %s", strerror(errno));
   }

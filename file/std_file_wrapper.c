@@ -9,6 +9,7 @@ struct FileTrait std_file_trait = {
     .truncate = std_truncate,
     .flush = std_flush,
     .fd = std_fd,
+    .filename = std_filename,
     .close = std_close,
 };
 
@@ -53,9 +54,15 @@ int std_fd(void *self) {
   return fileno(f->file);
 }
 
+char *std_filename(void *self) {
+  struct StdFile *f = (struct StdFile *) self;
+  return f->filename;
+}
+
 int std_close(void *self) {
   struct StdFile *f = (struct StdFile *) self;
   fclose(f->file);
+  free(f->filename);
   free(f);
   return 0;
 }
@@ -71,5 +78,6 @@ struct FileTrait **std_file_init(const char *filename, const char *mode) {
     free(file);
     return NULL;
   }
+  file->filename = strdup(filename);
   return (struct FileTrait **) file;
 }

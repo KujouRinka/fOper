@@ -5,6 +5,7 @@
 
 #include "acl.h"
 #include "attr.h"
+#include "ftime.h"
 #include "xattr.h"
 
 #endif

@@ -5,7 +5,7 @@ struct FileTrait;
 struct ConfigObj;
 
 int write_property(struct FileTrait **f_dst, struct FileTrait **f_src, struct ConfigObj *config);
-int fwrite_property(int fd_dst, int fd_src, struct ConfigObj *config);
+int fwrite_property(int fd_dst, const char *filename_dst, int fd_src, const char *filename_src, struct ConfigObj *config);
 int fnwrite_property(const char *dst, const char *src, struct ConfigObj *config);
 
 int fnwrite_dir_property(const char *dst, const char *src, struct ConfigObj *config);

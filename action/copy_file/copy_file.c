@@ -25,7 +25,7 @@ int copy_file(const char *dst, const char *src, struct ConfigObj *config) {
   MUST_OR_FREE_RET(src_file != NULL, -1, "open file failed: %s: %s", src, strerror(errno));
   free_list_add(src_file, (*src_file)->close);
   struct FileTrait **dst_file = std_file_init(dst, "w+");
-  MUST_OR_FREE_RET(dst_file != NULL, (TRAIT(src_file, FileTrait, close), -1), "open file failed: %s: %s", dst, strerror(errno));
+  MUST_OR_FREE_RET(dst_file != NULL, -1, "open file failed: %s: %s", dst, strerror(errno));
   free_list_add(dst_file, (*dst_file)->close);
 
   MUST_OR_FREE_RET(copy(dst_file, src_file) == 0, -1, "copy file failed");
@@ -61,7 +61,7 @@ static int vdcb(struct dirent *entry, const char *ori_path, const char *step_pat
   if (entry->d_type == DT_DIR) {
     char *dst_dirname = malloc(strlen(dst_dir) + strlen(step_path) + strlen(entry->d_name) + 3);
     MUST_OR_FREE_RET(dst_dirname != NULL, -1, "malloc failed");
-    sprintf(dst_dirname, "%s/%s/%s", dst_dir, step_path, entry->d_name);
+    sprintf(dst_dirname, "%s/%s%s%s", dst_dir, step_path, step_path[0] == '\0' ? "" : "/", entry->d_name);
     if (access(dst_dirname, F_OK) != 0) {
       MUST_OR_FREE_RET(mkdir(dst_dirname, 0755) == 0, (free(dst_dirname), -1), "mkdir failed: %s", strerror(errno));
     }
@@ -117,6 +117,10 @@ int copy_dir(const char *dst, const char *src, struct ConfigObj *config) {
 
   // copy src to dst
 #if defined(__linux__)
+  if (access(dst, F_OK) != 0) {
+    MUST_OR_RET(mkdir(dst, 0755) == 0, -1, "mkdir failed: %s", strerror(errno));
+    MUST_OR_RET(fnwrite_dir_property(dst, src, config) == 0, -1, "write property failed");
+  }
   MUST_OR_RET(visit_dir(src, vdcb, (void *) &arg) == 0, -1, "visit_dir failed: dst: %s, src: %s", dst, src);
 #else
   UNIMPLEMENTED();

@@ -16,6 +16,7 @@ int cmd_copy_file(struct ConfigObj *config) {
   d = is_dir(source_str);
   MUST_OR_RET(!(a == 0 && b == 0), -1, "target is not a file or directory");
   MUST_OR_RET(!(c == 0 && d == 0), -1, "source is not a file or directory");
+  MUST_OR_RET(!(c == 1 && d == 1), -1, "source is not exist");
 
   if (a != 0 && c != 0) {
     // dst and src are file
