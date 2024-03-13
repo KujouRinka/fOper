@@ -2,15 +2,16 @@ task-type: copy-file
 target: ./data/dir
 source: ./action
 exclude:
-  - ./data/src_dir/exclude1
-  - ./data/src_dir/exclude2
+  - copy_file
+  - gen_file/syscall.c
+  - copy_file/copy_file.c
 permission:
   # action: default
 
   action: mod
   owner: root
   group: rinka
-  mode:  r--rw----
+  mode:  rw-rw----
 
   # action: copy
 attr:
@@ -36,10 +37,10 @@ xattr:
 acl:
  # action: default
 
-  # action: mod
-  # operation: "u::rwx,u:rinka:r--,g::---,o::---,m::rwx"
+  action: mod
+  operation: "u::rwx,u:rinka:r--,u:root:r--,g::---,o::---,m::rwx"
 
-  action: copy
+  # action: copy
 time:
   # action: default
 

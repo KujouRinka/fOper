@@ -29,9 +29,11 @@ static int inner_visit_dir(const char *dirname, const char *step_path, int (*cal
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
       continue;
     }
-    MUST_OR_FREE_RET(callback(entry, dirname, step_path, arg) == 0, -1, "callback failed: to_open: %s", to_open);
 
-    if (entry->d_type == DT_DIR) {
+    int cb_ret = callback(entry, dirname, step_path, arg);
+    MUST_OR_FREE_RET(cb_ret != -1, -1, "callback failed: to_open: %s", to_open);
+
+    if (entry->d_type == DT_DIR && cb_ret != 1) {
       new_step_path = malloc(strlen(step_path) + strlen(entry->d_name) + 2);
       MUST_OR_FREE_RET(new_step_path != NULL, -1, "malloc failed");
       sprintf(new_step_path, "%s%s%s", step_path, step_path[0] == '\0' ? "" : "/", entry->d_name);

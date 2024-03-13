@@ -36,7 +36,7 @@ int file_set_mtime(const char *filename, const char *time, const char *fmt) {
   times.actime = st.st_atime;
   times.modtime = timestamp;
 
-  MUST_OR_RET(utime(filename, &times) == 0, -1, "utime failed: %s", strerror(errno));
+  MUST_OR_RET(utime(filename, &times) == 0 || errno != EPERM, -1, "utime failed: %s", strerror(errno));
   return 0;
 }
 
@@ -52,7 +52,7 @@ int file_set_atime(const char *filename, const char *time, const char *fmt) {
   // keep modtime unchanged
   times.modtime = st.st_mtime;
 
-  MUST_OR_RET(utime(filename, &times) == 0, -1, "utime failed: %s", strerror(errno));
+  MUST_OR_RET(utime(filename, &times) == 0 || errno != EPERM, -1, "utime failed: %s", strerror(errno));
   return 0;
 }
 
@@ -71,7 +71,7 @@ int file_copy_mtime(const char *dst, const char *src) {
   times.actime = st_dst.st_atime;
   times.modtime = st_src.st_mtime;
 
-  MUST_OR_RET(utime(dst, &times) == 0, -1, "utime failed: %s", strerror(errno));
+  MUST_OR_RET(utime(dst, &times) == 0 || errno != EPERM, -1, "utime failed: %s", strerror(errno));
   return 0;
 }
 
@@ -85,7 +85,7 @@ int file_copy_atime(const char *dst, const char *src) {
   // keep modtime unchanged
   times.modtime = st_dst.st_mtime;
 
-  MUST_OR_RET(utime(dst, &times) == 0, -1, "utime failed: %s", strerror(errno));
+  MUST_OR_RET(utime(dst, &times) == 0 || errno != EPERM, -1, "utime failed: %s", strerror(errno));
 
   return 0;
 }
@@ -99,7 +99,7 @@ int file_copy_times(const char *dst, const char *src) {
   times.actime = st_src.st_atime;
   times.modtime = st_src.st_mtime;
 
-  MUST_OR_RET(utime(dst, &times) == 0, -1, "utime failed: %s", strerror(errno));
+  MUST_OR_RET(utime(dst, &times) == 0 || errno != EPERM, -1, "utime failed: %s", strerror(errno));
 
   return 0;
 }

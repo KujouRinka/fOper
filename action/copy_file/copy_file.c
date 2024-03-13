@@ -53,27 +53,40 @@ int copy_file_to_dir(const char *dst, const char *src, struct ConfigObj *config)
 static int vdcb(struct dirent *entry, const char *ori_path, const char *step_path, void *arg) {
   FN_META();
 
-#if defined(__linux__)
   const char *dst_dir = (const char *) ((uint64_t *) arg)[0];
   struct ConfigObj *config = (struct ConfigObj *) ((uint64_t *) arg)[1];
+#if defined(__linux__)
+  // make up dst filename
+  char *dst_filename = malloc(strlen(dst_dir) + strlen(step_path) + strlen(entry->d_name) + 3);
+  MUST_OR_FREE_RET(dst_filename != NULL, -1, "malloc failed");
+  free_list_add(dst_filename, free_adapter);
+  sprintf(dst_filename, "%s/%s%s%s", dst_dir, step_path, step_path[0] == '\0' ? "" : "/", entry->d_name);
+  // make up src filename
+  char *src_filename = malloc(strlen(ori_path) + strlen(step_path) + strlen(entry->d_name) + 3);
+  MUST_OR_FREE_RET(src_filename != NULL, (free(dst_filename), -1), "malloc failed");
+  free_list_add(src_filename, free_adapter);
+  sprintf(src_filename, "%s/%s%s%s", ori_path, step_path, step_path[0] == '\0' ? "" : "/", entry->d_name);
+
+  // skip exclude
+  struct ConfigObj *exclude = CONFIG_TRAIT(config, as_map, "exclude");
+  size_t exclude_len = CONFIG_TRAIT(exclude, as_array_size);
+  char *ptr_to_cmp = src_filename + strlen(ori_path) + 1;
+  for (size_t i = 0; i < exclude_len; i++) {
+    struct ConfigObj *exclude_filename = CONFIG_TRAIT(exclude, as_array, i);
+    char *exclude_str = CONFIG_TRAIT(exclude_filename, as_string);
+    if (filepath_cmp(ptr_to_cmp, exclude_str) == 0) {
+      FN_CLEAN();
+      return 1;
+    }
+  }
 
   // create dir if not exist
   if (entry->d_type == DT_DIR) {
-    char *dst_dirname = malloc(strlen(dst_dir) + strlen(step_path) + strlen(entry->d_name) + 3);
-    MUST_OR_FREE_RET(dst_dirname != NULL, -1, "malloc failed");
-    sprintf(dst_dirname, "%s/%s%s%s", dst_dir, step_path, step_path[0] == '\0' ? "" : "/", entry->d_name);
-    if (access(dst_dirname, F_OK) != 0) {
-      MUST_OR_FREE_RET(mkdir(dst_dirname, 0755) == 0, (free(dst_dirname), -1), "mkdir failed: %s", strerror(errno));
+    if (access(dst_filename, F_OK) != 0) {
+      MUST_OR_FREE_RET(mkdir(dst_filename, 0755) == 0, (free(dst_filename), -1), "mkdir failed: %s", strerror(errno));
     }
 
-    char *src_filename = malloc(strlen(ori_path) + strlen(step_path) + strlen(entry->d_name) + 3);
-    MUST_OR_FREE_RET(src_filename != NULL, (free(dst_dirname), -1), "malloc failed");
-    sprintf(src_filename, "%s/%s/%s", ori_path, step_path, entry->d_name);
-
-    fnwrite_dir_property(dst_dirname, src_filename, config);
-
-    free(dst_dirname);
-    free(src_filename);
+    fnwrite_dir_property(dst_filename, src_filename, config);
 
     FN_CLEAN();
     return 0;
@@ -83,18 +96,6 @@ static int vdcb(struct dirent *entry, const char *ori_path, const char *step_pat
     FN_CLEAN();
     return 0;
   }
-
-  // make up src filename
-  char *src_filename = malloc(strlen(ori_path) + strlen(step_path) + strlen(entry->d_name) + 3);
-  MUST_OR_FREE_RET(src_filename != NULL, -1, "malloc failed");
-  free_list_add(src_filename, free_adapter);
-  sprintf(src_filename, "%s/%s/%s", ori_path, step_path, entry->d_name);
-
-  // make up dst filename
-  char *dst_filename = malloc(strlen(dst_dir) + strlen(step_path) + strlen(entry->d_name) + 3);
-  MUST_OR_FREE_RET(dst_filename != NULL, -1, "malloc failed");
-  free_list_add(dst_filename, free_adapter);
-  sprintf(dst_filename, "%s/%s/%s", dst_dir, step_path, entry->d_name);
 
   // copy file
   int ret = copy_file(dst_filename, src_filename, config);

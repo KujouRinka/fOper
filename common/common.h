@@ -156,6 +156,9 @@ int high_water_alloc(void **buf, size_t *bufsize, size_t newsize);
 
 const char *filepath_base_begin(const char *filepath);
 const char *filepath_dir_end(const char *filepath);
+int filepath_cmp(const char *fp1, const char *fp2);
+static char **split(const char *s, char delim, int *returnSize);
+static char *filepath_simplify(const char *path);
 
 FN_VOID_TO_INT_ADAPTER_DEC(free_adapter);
 
