@@ -1,8 +1,6 @@
 # 配置
 
-## 语法
-
-使用 `yaml` 作为配置文件格式，`yaml` 大小写敏感，使用缩进表示层级关系
+这个文件用于描述 `task-type: gen-file` 的配置文件格式
 
 ## 全局配置
 
@@ -11,7 +9,7 @@
 必须规定生成的目标文件名称
 
 ```yaml
-gen-file: ./dir/myfile.bin
+target: ./dir/myfile.bin
 ```
 
 生成目标文件的指定目录和文件名
